@@ -25,11 +25,11 @@ object Main extends App {
   val doc: Document = Document("name" -> "MongoDB", "type" -> "database",
     "count" -> 1, "info" -> Document("x" -> 203, "y" -> 102))
 
-  val userChoice = scala.io.StdIn.readLine("Please select an option from: create, read, update, delete, exit > ")
   var connected = false
-  loop.breakable {
-
-    while (!connected) {
+  while (!connected) {
+    Thread.sleep(1000)
+    val userChoice = scala.io.StdIn.readLine("Please select an option from: create, create 100, read, update, delete, delete all, exit > ")
+    loop.breakable {
 
       userChoice match {
 
@@ -37,24 +37,41 @@ object Main extends App {
           collection.insertOne(doc).results()
           loop.break()
 
+        case ("create 100") =>
+          val documents = (1 to 100) map { i: Int => Document("i" -> i) }
+          val insertObservable = collection.insertMany(documents)
+          val insertAndCount = for {
+            insertResult <- insertObservable
+            countResult <- collection.countDocuments()
+          } yield countResult
+          loop.break()
+
         case ("read") =>
           collection.find().printResults()
           loop.break()
 
         case ("update") =>
-          collection.updateOne(equal("i", 10), set("i", 110)).printHeadResult("Update Result: ")
+          collection.updateOne(equal("i", 10),
+            set("i", 110)).printHeadResult("Update Result: ")
           loop.break()
 
         case ("delete") =>
-          collection.deleteMany(gte("i", 1)).printHeadResult("Delete Result: ")
-          collection.deleteMany(gte("_id", 1)).printHeadResult("Delete Result: ")
-          collection.deleteMany(gte("name", "MongoDB")).printHeadResult("Delete Result: ")
-          collection.deleteOne(equal("i", 110)).printHeadResult("Delete Result: ")
+          collection.deleteOne(equal("_id",
+            scala.io.StdIn.readLine("Please enter the id you wish to delete: ").toInt))
+            .printHeadResult("Delete Result: ")
+          loop.break()
+
+        case ("delete all") =>
+          collection.deleteMany(gte("i", 1))
+            .printHeadResult("Delete Result: ")
+          collection.deleteMany(gte("_id", 1))
+            .printHeadResult("Delete Result: ")
+          collection.deleteMany(gte("name", "MongoDB"))
+            .printHeadResult("Delete Result: ")
           loop.break()
 
         case ("stop") =>
           connected = true
-
 
       }
     }
@@ -68,10 +85,6 @@ object Main extends App {
   //
   //  val insertObservable = collection.insertMany(documents)
   //
-  //  val insertAndCount = for {
-  //    insertResult <- insertObservable
-  //    countResult <- collection.countDocuments()
-  //  } yield countResult
   //
   //  val futureResult = insertAndCount.headOption()
   //
